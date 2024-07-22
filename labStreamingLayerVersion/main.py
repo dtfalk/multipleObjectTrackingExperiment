@@ -516,6 +516,11 @@ def main():
 
 # =========================================================================================================================
 
+    # YOU WILL NEED TO ADD AN INLET FOR THE PREDICTION STREAM AND PASS THIS TO THE TRIALS FUNCTION
+    # but likely only the REAL trials part of it. you will also need to create your own logic for handling
+    # what to do with a prediction
+
+    
     # == Collecting user info ==
 
     # get user's name

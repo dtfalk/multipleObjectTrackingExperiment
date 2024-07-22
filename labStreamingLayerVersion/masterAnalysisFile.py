@@ -7,6 +7,7 @@ from main import main as startExperiment
 from realtimeFunctions.offlineStorage import main as offlineStorage
 from realtimeFunctions.EEGTestOutlet import main as testOutlet
 
+# add a thread for real time analysis
 def main():
 
     experimentDictionary = {'dataCollectionRunning': True}

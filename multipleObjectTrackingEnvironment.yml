@@ -1,0 +1,55 @@
+name: multipleObjectTracking
+channels:
+  - defaults
+dependencies:
+  - bzip2=1.0.8=h2bbff1b_6
+  - ca-certificates=2024.7.2=haa95532_0
+  - expat=2.6.2=hd77b12b_0
+  - libffi=3.4.4=hd77b12b_1
+  - openssl=3.0.14=h827c3e9_0
+  - pip=24.0=py312haa95532_0
+  - python=3.12.4=h14ffc60_1
+  - setuptools=69.5.1=py312haa95532_0
+  - sqlite=3.45.3=h2bbff1b_0
+  - tk=8.6.14=h0416ee5_0
+  - vc=14.2=h2eaa2aa_4
+  - vs2015_runtime=14.29.30133=h43f2093_4
+  - wheel=0.43.0=py312haa95532_0
+  - xz=5.4.6=h8cc25b3_1
+  - zlib=1.2.13=h8cc25b3_1
+  - pip:
+      - certifi==2024.7.4
+      - charset-normalizer==3.3.2
+      - colorama==0.4.6
+      - contourpy==1.2.1
+      - cycler==0.12.1
+      - decorator==5.1.1
+      - egi-pynetstation==1.0.1
+      - fonttools==4.53.1
+      - idna==3.7
+      - jinja2==3.1.4
+      - kiwisolver==1.4.5
+      - lazy-loader==0.4
+      - markupsafe==2.1.5
+      - matplotlib==3.9.1
+      - mne==1.7.1
+      - ntplib==0.4.0
+      - numpy==2.0.1
+      - packaging==24.1
+      - pandas==2.2.2
+      - pillow==10.4.0
+      - platformdirs==4.2.2
+      - pooch==1.8.2
+      - pygame==2.6.0
+      - pylsl==1.16.2
+      - pyparsing==3.1.2
+      - python-dateutil==2.9.0.post0
+      - pytz==2024.1
+      - requests==2.32.3
+      - scipy==1.14.0
+      - screeninfo==0.8.1
+      - six==1.16.0
+      - tqdm==4.66.4
+      - tzdata==2024.1
+      - urllib3==2.2.2
+prefix: C:\Users\david\anaconda3\envs\multipleObjectTracking

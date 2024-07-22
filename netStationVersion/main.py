@@ -1,6 +1,7 @@
-# behavorial version of the MOT task
+# lab streaming layer version of the MOT task
 # written by David Tobias Falk, APEX Lab at the University of Chicago
-# TODO: make SOT easy?
+# TODO: make single object tracking easy?
+# TODO: check for existence of subject number and reprompt user?
 from helpers.constants import *
 from helpers.classes import *
 from helpers.dataStorage import *
@@ -10,23 +11,31 @@ from helpers.getUserInfo import *
 from helpers.messageScreens import *
 from helpers.statistics import *
 from helpers.gameOptions import *
+from helpers.netStationHelpers import *
+from egi_pynetstation import NetStation
 import pygame as pg
 
-# creates lists to make time checking more readable
-# I will admit this is a bit of a pain to look at
+# end times of each phase
 fixationEnd = fixationDuration
 highlightEnd = fixationDuration + highlightDuration
 movementEnd = fixationDuration + highlightDuration + movementDuration
-responseEnd = fixationDuration + highlightDuration + movementDuration + responseDuration
+selectionEnd = fixationDuration + highlightDuration + movementDuration + selectionDuration
 
 # == Runs trials ==
-def trials(gametype, startingLevel, subjectNumber, name, win):
+def trials(gametype, startingLevel, subjectNumber, name, win, eventsOutlet, clock):
+
+    eventsOutlet.resync()
     
     # == Generates the game ==
+    # use the selected starting level for the real trials
     if gametype == 'real':
         game = initializeGame(startingLevel, gametype)
+    
+    # use the practice starting level (defined in constants.py) for the practice trials
     elif gametype == 'practice':
         game = initializeGame(startingPracticeLevel, gametype)
+    
+    # use level 1 for the guide trials
     else:
         game = initializeGame(1, gametype)
 
@@ -42,11 +51,25 @@ def trials(gametype, startingLevel, subjectNumber, name, win):
     submitted = False
     incorrectNumberOfSelections = False
     timeup = False
+    clickCountdown = 0
 
-    # initially show that we are starting level
+    # tag push variables
+    fixationTagPushed = False
+    fixationTagFlipped = False
+
+    highlightTagPushed = False
+    highlightTagFlipped = False
+    
+    movementTagPushed = False
+    movementTagFlipped = False
+
+    selectionTagPushed = False
+    selectionTagFlipped = False
+
+    # initially show that we are starting level for the real trials
     if gametype == 'real':
         args = [game['level']]
-        messageScreen('levelScreen', args, win)
+        messageScreen('levelScreen', args, eventsOutlet, win)
     
     # variables to store how long the experiment has been running for
     startTime = pg.time.get_ticks()
@@ -85,6 +108,7 @@ def trials(gametype, startingLevel, subjectNumber, name, win):
 
                     # if the user presses escape (the quit key), then we quit the game
                     if event.key == generalQuitKey:
+                        blankSquareScreen('QUIT', eventsOutlet, win)
                         pg.quit()
                         sys.exit()
                     
@@ -92,8 +116,8 @@ def trials(gametype, startingLevel, subjectNumber, name, win):
                     # the current stage
                     if event.key == skipKey:
                         return game
-                    # if the user presses space bar during the response phase...
-                    if event.key == submitAnswerKey and (movementEnd < timeElapsedSinceStartOfTrial <= responseEnd):
+                    # if the user presses space bar during the selection phase...
+                    if event.key == submitAnswerKey and (movementEnd < timeElapsedSinceStartOfTrial <= selectionEnd):
 
                         selectedBalls = [] # list for all selected balls
                         selectedTargets = [] # list for all selected targets
@@ -112,6 +136,13 @@ def trials(gametype, startingLevel, subjectNumber, name, win):
                         # if the user has selected the correct number of balls, then we set submitted to True
                         if len(selectedBalls) == len(targets):
                             submitted = True
+
+                            # draw the true time square
+                            if gametype == 'real':
+                                drawSquare(win)
+                                sendTag('SBMT', eventsOutlet)
+                                pg.display.flip()
+                                pg.time.delay(squareDuration)
                             
                         # otherwise we set the insufficient selections variable to true
                         else:
@@ -128,11 +159,29 @@ def trials(gametype, startingLevel, subjectNumber, name, win):
 
                             # if the ball is not already selected, then we color it selected
                             if not ball.isSelected:
-                                ball.stateControl("selected")
+
+                                # no clicking more than once per squareDuration
+                                if clickCountdown <= 0:
+                                    ball.stateControl("selected")
+
+                                    # variables to reference to show square for a click
+                                    clickCountdown = squareDuration
+                                    clickTime = pg.time.get_ticks()
+                                    clickType = 'select'
+                                    clickTagSent = False
                             
                             # if the ball is already selected, then we color it unselected
-                            else:
-                                ball.stateControl("neutral")
+                            else: 
+
+                                # no unclicking more than once per squareDuration
+                                if clickCountdown <= 0:                               
+                                    ball.stateControl("neutral")
+
+                                    # variables to reference to show square for a click
+                                    clickCountdown = squareDuration
+                                    clickTime = pg.time.get_ticks()
+                                    clickType = 'unselect'
+                                    clickTagSent = False
                     
                         # if the mouse is hovering over the ball and the ball is not selected, then we apply the hover color
                         elif event.type == pg.MOUSEMOTION:
@@ -153,6 +202,15 @@ def trials(gametype, startingLevel, subjectNumber, name, win):
                 # handling the fixation phase
                 if timeElapsedSinceStartOfTrial <= fixationEnd:
                     
+                    # flip this variable to true to indicate that we 
+                    # should push the tag right before (or after... needs testing) the screen flip
+                    if not fixationTagFlipped:
+                        fixationTagFlipped = True
+
+                    # draw the true time square
+                    if timeElapsedSinceStartOfTrial <= squareDuration and gametype == 'real':
+                        drawSquare(win)
+                    
                     # hide mouse in this phase
                     pg.mouse.set_visible(False)
 
@@ -165,6 +223,15 @@ def trials(gametype, startingLevel, subjectNumber, name, win):
 
                 # handling the highlighting balls phase
                 elif fixationEnd < timeElapsedSinceStartOfTrial <= highlightEnd:
+
+                    # flip this variable to true to indicate that we 
+                    # should push the tag right before (or after... needs testing) the screen flip
+                    if not highlightTagFlipped:
+                        highlightTagFlipped = True
+
+                    # draw the true time square
+                    if timeElapsedSinceStartOfTrial <= fixationEnd + squareDuration and gametype == 'real':
+                        drawSquare(win)
                     
                     # hide mouse in this phase
                     pg.mouse.set_visible(False)
@@ -183,6 +250,15 @@ def trials(gametype, startingLevel, subjectNumber, name, win):
                 # handling the ball movement phase
                 elif highlightEnd < timeElapsedSinceStartOfTrial <= movementEnd:
 
+                    # flip this variable to true to indicate that we 
+                    # should push the tag right before (or after... needs testing) the screen flip
+                    if not movementTagFlipped:
+                        movementTagFlipped = True
+
+                    # draw the true time square
+                    if timeElapsedSinceStartOfTrial <= highlightEnd + squareDuration and gametype == 'real':
+                        drawSquare(win)
+
                     # hide mouse in this phase
                     pg.mouse.set_visible(False)
 
@@ -193,11 +269,37 @@ def trials(gametype, startingLevel, subjectNumber, name, win):
                     # draw the balls in motion
                     drawMovingBalls(targets, distractors, win)
 
-                    # keep mouse centered so it will be centered when response phase begins
+                    # keep mouse centered so it will be centered when selection phase begins
                     pg.mouse.set_pos(winWidth // 2, winHeight // 2)
                 
                 # handling the response/selection phase
-                elif movementEnd < timeElapsedSinceStartOfTrial <= responseEnd:
+                elif movementEnd < timeElapsedSinceStartOfTrial <= selectionEnd:
+
+                    # flip this variable to true to indicate that we 
+                    # should push the tag right before (or after... needs testing) the screen flip
+                    if not selectionTagFlipped:
+                        selectionTagFlipped = True
+
+                    # draw the true time square
+                    if timeElapsedSinceStartOfTrial <= movementEnd + squareDuration and gametype == 'real':
+                        drawSquare(win)
+
+                    # draw square if a ball has been clicked recently ("recently" with resepect to "squareDuration")
+                    if clickCountdown > 0:
+                        
+                        if gametype == 'real':
+                            drawSquare(win)
+
+                        # send the tag for the click if it hasn't been sent yet
+                        if not clickTagSent and gametype == 'real':
+                            if clickType == 'select':
+                                sendTag('CLCK', eventsOutlet)
+                            else:
+                                sendTag('UCLK', eventsOutlet)
+                            clickTagSent = True
+                        
+                        # decrement the countdown
+                        clickCountdown = squareDuration - (pg.time.get_ticks() - clickTime)
                     
                     # make the mouse visible again so the user can make selections
                     pg.mouse.set_visible(True)
@@ -209,7 +311,7 @@ def trials(gametype, startingLevel, subjectNumber, name, win):
 
                         # display the insufficient selections text
                         args = [len(targets)]
-                        messageScreen("incorrectNumberOfSelectionsScreen", args, win)
+                        messageScreen("incorrectNumberOfSelectionsScreen", args, eventsOutlet, win)
 
                         # remove the message after half of a second
                         if pg.time.get_ticks() - insufficientSelectionTime > 500:
@@ -217,10 +319,18 @@ def trials(gametype, startingLevel, subjectNumber, name, win):
                     
                 # handle taking too long to answer
                 else:
+
+                    # draw true time square and delay for a tenth of a second
+                    if gametype == 'real':
+                        drawSquare(win)
+                        sendTag('TMUP', eventsOutlet)
+                        pg.display.flip()
+                        pg.time.delay(squareDuration)
+
                     pg.mouse.set_visible(False)
                     timeup = True
 
-            # handles what happens after the user submits their responses
+            # handles what happens after the user submits their selections
             if submitted:
 
                 # hide mouse
@@ -229,14 +339,16 @@ def trials(gametype, startingLevel, subjectNumber, name, win):
                 # == message screen stating performance on that trial ==
 
                 # if the user identified all of the targets, then display the correct screen
+                if gametype == 'real':
+                    sendTag(f'P{len(selectedTargets)}{len(targets)}{len(distractors)}', eventsOutlet)
                 if len(selectedTargets) == len(targets):
                     args = [len(targets)]
-                    messageScreen('correctScreen', args, win)
+                    messageScreen('correctScreen', args, eventsOutlet, win)
                 
                 # otherwise display the incorrect screen
                 else:
                     args = [len(selectedTargets), len(targets)]
-                    messageScreen('incorrectScreen', args, win)
+                    messageScreen('incorrectScreen', args, eventsOutlet, win)
                 
                 # == Records info for the trial ==
 
@@ -249,7 +361,7 @@ def trials(gametype, startingLevel, subjectNumber, name, win):
                 # increment number of trials completed by 1
                 trialsCount += 1
 
-                # record user response if in the real trials
+                # record user selection if in the real trials
                 if gametype == 'real':
                     recordTrialData(trialsCount, subjectNumber, name, submissionTime, totalTime / 1000, game, len(selectedTargets), dprime, False)
 
@@ -281,7 +393,7 @@ def trials(gametype, startingLevel, subjectNumber, name, win):
                 
                 # show timeup message screen
                 args = []
-                messageScreen("timeupScreen", args, win)
+                messageScreen("timeupScreen", args, eventsOutlet, win)
 
                 # set the reset variable to true 
                 # (don't need to update the game because the user will be given the same level)
@@ -289,12 +401,13 @@ def trials(gametype, startingLevel, subjectNumber, name, win):
 
             # prepare for the next trial (note that the game has already been updated)
             if reset: 
+                eventsOutlet.resync()
 
                 # keep mouse invisible
                 pg.mouse.set_visible(False)
 
                 # gives user break after certain amount of time in real trials
-                if gametype == 'real':
+                if gametype == 'real' and breakScreenEnabled:
 
                     # give user a break halfway through the real trials
                     if totalTime > (timeOrTrialsDict[gametype] // 2) and not breakGiven:
@@ -305,7 +418,9 @@ def trials(gametype, startingLevel, subjectNumber, name, win):
                         # display break screen
                         pg.event.clear()
                         args = []
-                        messageScreen('breakScreen', args, win)
+                        sendTag('BRK0', eventsOutlet)
+                        messageScreen('breakScreen', args, eventsOutlet, win)
+                        sendTag('BRK1', eventsOutlet)
 
                         # subtract the total break time from the total time played
                         # don't want user taking a 10 minute break and having that cut into their play time
@@ -320,6 +435,19 @@ def trials(gametype, startingLevel, subjectNumber, name, win):
                 timeup = False
                 incorrectNumberOfSelections = False
                 reset = False
+
+                # reset tag push variables
+                fixationTagPushed = False
+                fixationTagFlipped = False
+
+                highlightTagPushed = False
+                highlightTagFlipped = False
+
+                movementTagPushed = False
+                movementTagFlipped = False
+
+                selectionTagPushed = False
+                selectionTagFlipped = False
                 
                 # if gametype is real, the show level and score
                 if gametype == 'real':
@@ -327,17 +455,17 @@ def trials(gametype, startingLevel, subjectNumber, name, win):
                     # display the user's current score if score showing is enabled
                     if scoreEnabled:
                         args = [game['score']]
-                        messageScreen('scoreScreen', args, win)
+                        messageScreen('scoreScreen', args, eventsOutlet, win)
 
                     # display level the user is on if there is another level to play
                     if totalTime < timeOrTrialsDict[gametype]:
                         args = [game['level']]
-                        messageScreen('levelScreen', args, win)
+                        messageScreen('levelScreen', args, eventsOutlet, win)
 
                 # reset the trial start time
                 trialStartTime = pg.time.get_ticks()
 
-         # handles the end of experiment/practice/guide (if not timeOrTrialsCompleted < timeOrTrials) 
+        # handles the end of experiment/practice/guide (if not timeOrTrialsCompleted < timeOrTrials) 
         else:
             
             # make mouse invisible
@@ -348,7 +476,32 @@ def trials(gametype, startingLevel, subjectNumber, name, win):
             return game
 
         totalTime = pg.time.get_ticks() - startTime
+
+        # == phase start tag sending logic ==
+        if gametype == 'real':
+            if fixationTagFlipped and not fixationTagPushed:
+                # start of fixation phase and current level
+                if len(str(game['level'])) == 1: # handles 1 digit numbers
+                    tag = 'FXX' + str(game['level'])
+                else: # handles 2 digit numbers
+                    tag = 'FX' + str(game['level'])
+                sendTag(tag, eventsOutlet)
+                fixationTagPushed = True
+            elif highlightTagFlipped and not highlightTagPushed:
+                # start of highlight phase
+                sendTag('HGLT', eventsOutlet)
+                highlightTagPushed = True
+            elif movementTagFlipped and not movementTagPushed:
+                # start of movement phase
+                sendTag('MVMT', eventsOutlet)
+                movementTagPushed = True
+            elif selectionTagFlipped and not selectionTagPushed:
+                # start of selection phase
+                sendTag('SLCT', eventsOutlet)
+                selectionTagPushed = True
+
         pg.display.flip()
+        clock.tick(FPS)
 
 # Main Loop
 def main():
@@ -361,6 +514,9 @@ def main():
 
     # == Set window ==
     win = pg.display.set_mode((winWidth, winHeight), pg.FULLSCREEN)
+
+    # initialize a pygame clock to control the frame rate
+    clock = pg.time.Clock()
 
     # make mouse invisible
     pg.mouse.set_visible(False)
@@ -375,57 +531,63 @@ def main():
     # get user's subject number
     subjectNumber = getUserInfo('subject number', win)
 
+    # == Initialize event stream outlet ==
+    eventsOutlet = initializeEventsOutlet()
+
     # level the user starts on
     startingLevel = 1
-    if allowLevelSelect:
+    if levelSelectEnabled:
         startingLevel = int(getUserInfo('starting level (1 - 99)', win))
 
 # =========================================================================================================================
 
     # == Pre-trials resting state screens ==
-
+    
     # show users the eyes open resting state instructions and screen
-    if eyesOpenPreRestScreen:
+    if eyesOpenPreRestScreenEnabled:
         pg.event.clear()
         args = []
-        messageScreen('eyesOpenScreen', args, win)
-        drawEyesOpenScreen(win)
+        messageScreen('eyesOpenScreen', args, eventsOutlet, win)
+        eventsOutlet.resync()
+        drawEyesOpenScreen(win, eventsOutlet = eventsOutlet)
         pg.event.clear()
 
 
     # show users the eyes closed resting state instructions and screen
-    if eyesClosedPreRestScreen:
+    if eyesClosedPreRestScreenEnabled:
         args = []
-        messageScreen('eyesClosedScreen', args, win)
-        drawEyesClosedScreen(win)
+        messageScreen('eyesClosedScreen', args, eventsOutlet, win)
+        eventsOutlet.resync()
+        drawEyesClosedScreen(win, eventsOutlet = eventsOutlet)
         pg.event.clear()
 
 # =========================================================================================================================
 
     # == Guide trials ==
-    
-    if guideTrials:
+    if guideTrialsEnabled:
 
         # show guide screen text
         args = [startingTargets, startingTargets + startingDistractors]
-        messageScreen('guideStartScreen', args, win)
+        messageScreen('guideStartScreen', args, eventsOutlet, win)
         pg.event.clear()
 
         # start guide trials
-        trials(gametype = 'guide', startingLevel = startingLevel, subjectNumber = subjectNumber, name = name, win = win)
+        eventsOutlet.resync()
+        trials(gametype = 'guide', startingLevel = startingLevel, subjectNumber = subjectNumber, name = name, win = win, eventsOutlet = eventsOutlet, clock = clock)
         pg.event.clear()
 
 
     # == Practice trials ==
-    if practiceTrials:
+    if practiceTrialsEnabled:
 
         # show practice screen text
         args = []
-        messageScreen('practiceStartScreen', args, win)
+        messageScreen('practiceStartScreen', args, eventsOutlet, win)
         pg.event.clear()
 
         # start practice trials
-        trials(gametype = 'practice', startingLevel = startingLevel, subjectNumber = subjectNumber, name = name, win = win)
+        eventsOutlet.resync()
+        trials(gametype = 'practice', startingLevel = startingLevel, subjectNumber = subjectNumber, name = name, win = win, eventsOutlet = eventsOutlet, clock = clock)
         pg.event.clear()
 
 
@@ -433,29 +595,46 @@ def main():
 
     # show real trials text
     args = []
-    messageScreen('realTrialsStartScreen', args, win)
+    messageScreen('realTrialsStartScreen', args, eventsOutlet, win)
+    pg.event.clear()
+
+    eventsOutlet.resync()
+    # quick square and tag to indicate start of real trials
+    blankSquareScreen('TRL0', eventsOutlet, win)
     pg.event.clear()
 
     # begin real trials
-    game = trials(gametype = 'real', startingLevel = startingLevel, subjectNumber = subjectNumber, name = name, win = win)
+    eventsOutlet.resync()
+    game = trials(gametype = 'real', startingLevel = startingLevel, subjectNumber = subjectNumber, name = name, win = win, eventsOutlet = eventsOutlet, clock = clock)
     pg.event.clear()
+
+    # draw a square and send a tag to indicate end of real trials
+    blankSquareScreen('TRL1', eventsOutlet, win)
+    pg.event.clear()
+
 
 # =========================================================================================================================
 
     # == Post-trials resting state screens ==
 
     # show users the eyes open resting state instructions and screen
-    if eyesOpenPostRestScreen:
+    if eyesOpenPostRestScreenEnabled:
         args = []
-        messageScreen('eyesOpenScreen', args, win)
-        drawEyesOpenScreen(win)
+        messageScreen('eyesOpenScreen', args, eventsOutlet, win)
+        eventsOutlet.resync()
+        drawEyesOpenScreen(win, eventsOutlet = eventsOutlet)
         pg.event.clear()
 
     # show users the eyes closed resting state instructions and screen
-    if eyesClosedPostRestScreen:
+    if eyesClosedPostRestScreenEnabled:
         args = []
-        messageScreen('eyesClosedScreen', args, win)
-        drawEyesClosedScreen(win)
+        messageScreen('eyesClosedScreen', args, eventsOutlet, win)
+        eventsOutlet.resync()
+        drawEyesClosedScreen(win, eventsOutlet = eventsOutlet)
+    
+    # draw end of experiment screen
+    eventsOutlet.resync()
+    blankSquareScreen('QUIT', eventsOutlet, win)
 
 # =========================================================================================================================
 
@@ -463,7 +642,7 @@ def main():
 
         # display user's score
         args = [game['score']]
-        messageScreen('finalScoreScreen', args, win)
+        messageScreen('finalScoreScreen', args, eventsOutlet, win)
 
         #  == High scores ==
         # (assuming this functionality is activated)
@@ -477,22 +656,23 @@ def main():
             # if the user made the highscore list, then inform them and update the highscores list
             if rank != -1:
                 args = [rank]
-                messageScreen('newHighscoreScreen', args, win)
+                messageScreen('newHighscoreScreen', args, eventsOutlet, win)
                 highscores = addHighScore(score)
         
             # display highscores
             args = [highscores]
-            messageScreen('highscoresScreen', args, win)
+            messageScreen('highscoresScreen', args, eventsOutlet, win)
             pg.event.clear()
 
 # =========================================================================================================================
     
     # display exit message 
     args = []
-    messageScreen('experimentFinishedScreen', args, win)
+    messageScreen('experimentFinishedScreen', args, eventsOutlet, win)
 
     # create summary csv for the user
     summaryData(subjectNumber, name, game['score'])
+
 
     return
 

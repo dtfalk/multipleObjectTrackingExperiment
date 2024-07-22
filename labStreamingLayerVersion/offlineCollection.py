@@ -1,8 +1,7 @@
 # run this file if you want to do offline data collection on the same computer you
 # are running the experiment on. (Currently, this file includes a call to EEGTestOutlet)
 # which is a mock EEG + DIN outlet device for testing purposes. If you are using
-# the actual Netstation system, the comment out the lines relating to this.)
-
+# the actual Netstation system, then comment out the lines relating to this.)
 from threading import Thread
 from main import main as startExperiment
 from realtimeFunctions.offlineStorage import main as offlineStorage

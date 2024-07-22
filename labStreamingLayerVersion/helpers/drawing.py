@@ -1,22 +1,24 @@
 # file for drawing various objects on the screen
 import pygame as pg
-from helpers.constants import *
-from helpers.LSLHelpers import sendTag
+from .constants import BLACK, squareColor, defaultColor, borderColor, backgroundColor, highlightColor # colors
+from .constants import boundaries, boundarySize, winWidth, winHeight, squareWidth, fixationCrossLength # size variables
+from .constants import highlightDuration, squareDuration, restingStateTime, eyesOpenAudioPath # timing + other
+from .LSLHelpers import sendTag
 
 # draws the black border on the screen
 def drawBoundaries(win):
     
     # right boundary
-    pg.draw.rect(win, BLACK, pg.Rect(boundaries['right'], 0, boundarySize, winHeight))
+    pg.draw.rect(win, borderColor, pg.Rect(boundaries['right'], 0, boundarySize, winHeight))
     
     # left boundary
-    pg.draw.rect(win, BLACK, pg.Rect(0, 0, boundarySize, winHeight))
+    pg.draw.rect(win, borderColor, pg.Rect(0, 0, boundarySize, winHeight))
 
     # top boundary
-    pg.draw.rect(win, BLACK, pg.Rect(0, 0, winWidth, boundarySize))
+    pg.draw.rect(win, borderColor, pg.Rect(0, 0, winWidth, boundarySize))
     
     # bottom boundary
-    pg.draw.rect(win, BLACK, pg.Rect(0, boundaries['bottom'], winWidth, boundarySize))
+    pg.draw.rect(win, borderColor, pg.Rect(0, boundaries['bottom'], winWidth, boundarySize))
 
     return
 
@@ -32,7 +34,7 @@ def highlightTargets(distractors, targets, win):
 
     # color the targets and draw them
     for target in targets:
-        target.color = GREEN
+        target.color = highlightColor
         target.drawCircle(win)
 
     # draw the distractors

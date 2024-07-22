@@ -2,9 +2,6 @@
 # written by David Tobias Falk, APEX Lab at the University of Chicago
 # TODO: make single object tracking easy?
 # TODO: check for existence of subject number and reprompt user?
-# TODO: sourceIDs for outlets to allow for easy reconnect?
-# ERRORS IN PERFORMANCE TAGS AND WITH TIMESTAMPS JUMPING???
-
 from helpers.constants import *
 from helpers.classes import *
 from helpers.dataStorage import *

@@ -1,6 +1,6 @@
 from math import floor
-from helpers.constants import *
-from helpers.classes import Ball, getValidPositions
+from .constants import startingDistractors, startingTargets, success, failure, distractorsOverflow, speedOverflow
+from .classes import Ball, getValidPositions
 
 # initializes a game dictionary
 def initializeGame(level, gametype):

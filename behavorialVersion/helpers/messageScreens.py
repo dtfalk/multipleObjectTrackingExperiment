@@ -1,7 +1,13 @@
 import sys
 import pygame as pg
-from helpers.constants import *
-from helpers.drawing import drawBoundaries
+from .constants import backgroundColor, BLACK, winWidth, winHeight, boundarySize, correctAudioPath, incorrectAudioPath, selectionDuration
+from .constants import levelScreenTime, currentScoreScreenTime, trialPerformanceScreenTime, \
+                        newHighscoreScreenTime, finalScoreScreenTime, highscoreScreenTime, timeupScreenTime
+from .constants import extraLargeFont, largeFont, mediumFont
+from .constants import eyesOpenContinueKey, eyesClosedContinueKey, startPracticeTrialsKey, startRealTrialsKey, \
+                        instructionsScreenContinueKey, breakScreenContinueKey, exitOnceFinishedKey, \
+                        submitAnswerKeyString, generalQuitKey
+from .drawing import drawBoundaries
 
 
 # function to centralize/handle the different message screens
@@ -137,7 +143,6 @@ def messageScreen(messageType, args, win):
     # message screen displaying the current highscores
     elif messageType == 'highscoresScreen':
         win.fill(backgroundColor)
-        drawBoundaries(win)
         text = highscoresText(args[0])
         multiLineMessage(text, extraLargeFont, win)
         pg.display.flip()
@@ -159,10 +164,10 @@ def multiLineMessage(text, textsize, win):
     color = BLACK
 
     # Initialize variables for layout calculations
-    xPos_start = winWidth / 10
-    yPos_start = winHeight / 10
-    xMax = 0.9 * (winWidth - boundarySize)
-    yMax = 0.9 * (winHeight - boundarySize)
+    xPos_start = 0.05 * (winWidth - boundarySize)
+    yPos_start = 0.05 * (winHeight - boundarySize)
+    xMax = 0.95 * (winWidth - boundarySize)
+    yMax = 0.95 * (winHeight - boundarySize)
 
     # Function to calculate if the text fits within the designated area
     def fitsWithinArea(text, font):
@@ -331,7 +336,7 @@ def instructionsText(numberOfTargets, totalBalls):
 Keep track of those {numberOfTargets} flashed circles.\n\n\
 When the circles stop moving select which circles you have been tracking by clicking them.\n\n\
 When you have made your selection press {submitAnswerKeyString} to submit.\n\n\
-You will have {int(responseDuration / 1000)} seconds to make your choice.\n\n\
+You will have {int(selectionDuration / 1000)} seconds to make your choice.\n\n\
 Please remember to focus your eyes on the cross.\n\n\
 After the cross disappears you may move your eyes, but please keep them focused on the screen.\n\n\
 If you need to stop, then let the experimenter know.\n\n\
@@ -375,7 +380,7 @@ Be as quick and accurate as you can!\n\n\
 Press the "{chr(startRealTrialsKey - pg.K_a + ord('a'))}" key when you are ready to begin the real experiment.'
 
 # text we show user after they complete the entire experiment
-experimentFinishedText = f'The real trials is now over; please let the experimenter know.\n\n\
+experimentFinishedText = f'The real trials are now over; please let the experimenter know.\n\n\
 Thank you for participating!\n\n\
 Press "{chr(exitOnceFinishedKey - pg.K_a + ord('a'))}" to exit.'
 

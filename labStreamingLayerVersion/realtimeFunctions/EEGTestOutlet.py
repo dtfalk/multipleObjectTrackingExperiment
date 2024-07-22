@@ -1,7 +1,5 @@
 from pylsl import StreamOutlet, StreamInfo, local_clock
-import numpy as np
 from time import sleep
-from .dictionaries import DIN_OFF_VALUE
 
 def main(experimentDictionary):
 

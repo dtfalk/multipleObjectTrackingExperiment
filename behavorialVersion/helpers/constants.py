@@ -6,11 +6,31 @@ from screeninfo import get_monitors
 # ============================================================================
 # ============================================================================
 
+# frame rate for the game 
+FPS = 60 
+
+# Set multiMonitor to True if you are using two monitors and want the game to be displayed
+# on the second monitor
+# Set to False otherwise
+multiMonitor = True
+
 # get window width and height (will handle dpi later?)
 winfo = get_monitors()
-winWidth = winfo[0].width
-winHeight = winfo[0].height
-FPS = 60
+
+# if user wants to use a secondary monitor for the game
+if multiMonitor and len(winfo) > 1:
+    winWidth = winfo[1].width
+    winHeight = winfo[1].height
+    winX = winfo[1].x
+    winY = winfo[1].y
+else:
+    winWidth = winfo[0].width
+    winHeight = winfo[0].height
+    winX = winfo[0].x
+    winY = winfo[0].y
+
+os.environ['SDL_VIDEO_WINDOW_POS'] = "%d,%d" % (winX, winY)
+
 
 # ============================================================================
 # ============================================================================
@@ -52,6 +72,9 @@ defaultColor = WHITE # default ball color
 backgroundColor = GREY # background for the experiment
 hoverColor = YELLOW # color of the ball when mouse is hovering over it
 clickColor = GREEN # color of the ball when it has been clicked
+squareColor = WHITE # color of the square we draw to get the "true time" for tags
+borderColor = BLACK # color of the borders on the screen
+highlightColor = GREEN # color of ball when selected or highlighted
 
 # ============================================================================
 # ============================================================================
@@ -65,6 +88,7 @@ clickColor = GREEN # color of the ball when it has been clicked
 ballRadius = winWidth // 40  # size of balls in pixels
 boundarySize = winWidth // 50 # boundary size in pixels
 fixationCrossLength = winWidth // 40 # length of the legs on the fixation cross (there are 4 legs)
+squareWidth = boundarySize // 2 # width of the "true time" square
 
 # boundaries of the screen (top left corner is considered the origin in pygame)
 boundaries = {
@@ -89,7 +113,9 @@ highlightDuration = int(2 * 1000)  # time for targets to flash
 
 movementDuration = int(4.5 * 1000)  # time for objects to move around in seconds
 
-responseDuration = int(60 * 1000)  # time for the user to make a response
+selectionDuration = int(60 * 1000)  # time for the user to make a response
+
+squareDuration = int(0.1 * 1000) # how long we display the "true time" square
 
 # ============================================================================
 # ============================================================================
@@ -119,6 +145,9 @@ speedOverflow = 3
 startingTargets = 2
 startingDistractors = 1
 
+# modify this to change ball speeds
+velocityFactor = (winWidth + winHeight) // (2 * 300)
+
 # == how far (in levels) player progresses or regresses based on performance ==
 success = 1
 failure = -3
@@ -130,7 +159,9 @@ startingPracticeLevel = 3
 timeOrTrialsDict = {
 
     # time that real trials last (in milliseconds)
-    'real' : 120 * 1000,
+    # just modify the first number to get game time in minutes
+    # you multiply num_minutes by (60 * 1000) to get the number of minutes in milliseconds
+    'real' :  1 * (60 * 1000), 
 
     # number of practice trials
     'practice': 5,
@@ -156,7 +187,7 @@ finalScoreScreenTime = int(1.5 * 1000)
 levelScreenTime = int(1.5 * 1000)
 
 # how long each resting state lasts for (in milliseconds)
-restingStateTime = int(3 * 1000)
+restingStateTime = 1000 #int(3 * (60 * 1000))
 
 # how long to show the current score for (in milliseconds)
 currentScoreScreenTime = int(2 * 1000)

@@ -1,9 +1,9 @@
 # file containing class definition and associated functions for the ball objects
-from helpers.constants import *
 from random import choice, uniform
 from math import sqrt, hypot
 import pygame as pg
-from helpers.gameOptions import exactPhysics
+from .gameOptions import exactPhysicsEnabled
+from .constants import ballRadius, defaultColor, hoverColor, clickColor, boundaries, winWidth, winHeight, fixationCrossLength, velocityFactor
 
 # == Defines the Objects (Balls) and their Properties ==
 class Ball:
@@ -33,10 +33,9 @@ class Ball:
 
     def inCircle(self, mouse_x, mouse_y):
         # -- Return boolean value deping on mouse position, if it is in circle or not
-        if sqrt(((mouse_x - self.x) ** 2) + ((mouse_y - self.y) ** 2)) < self.radius:
+        if hypot((mouse_x - self.x), (mouse_y - self.y)) < self.radius:
             return True
-        else:
-            return False
+        return False
 
     def stateControl(self, state):
         # -- Neutral or default state with no form of mouse selection
@@ -62,44 +61,56 @@ class Ball:
         # master list of targets and distractors
         masterList = targets + distractors
 
-        # Handle collisions with the boundaries (invert the direction of velocity)
-        if self.x - self.radius <= boundaries["left"]:
-            self.dx = abs(self.dx)
-            self.x = boundaries["left"] + self.radius + 1
-        if self.x + self.radius >= boundaries["right"]:
-            self.dx = -1 * abs(self.dx)
-            self.x = boundaries["right"] - self.radius - 1
-        if self.y - self.radius <= boundaries["top"]: 
-            self.dy = abs(self.dy)
-            self.y = boundaries["top"] + self.radius + 1
-        if self.y + self.radius >= boundaries["bottom"]:
-            self.dy = -1 * abs(self.dy)
-            self.y = boundaries["bottom"] - self.radius - 1
-        
-        # Handle two balls colliding by running final velocites function
-        used = set()
+        # handles boundary collisions
+        def handleBoundaryCollisions():
+            if self.x - self.radius <= boundaries["left"]:
+                self.dx = abs(self.dx)
+                self.x = boundaries["left"] + self.radius
+            if self.x + self.radius >= boundaries["right"]:
+                self.dx = -abs(self.dx)
+                self.x = boundaries["right"] - self.radius
+            if self.y - self.radius <= boundaries["top"]: 
+                self.dy = abs(self.dy)
+                self.y = boundaries["top"] + self.radius
+            if self.y + self.radius >= boundaries["bottom"]:
+                self.dy = -abs(self.dy)
+                self.y = boundaries["bottom"] - self.radius
+
+        subSteps = 4  # Number of sub-steps per frame
+
+        # Sub-stepping logic
+        for _ in range(subSteps):
+            self.x += self.dx / subSteps
+            self.y += self.dy / subSteps
+            handleBoundaryCollisions()
+
+        # Handle two balls colliding by running final velocities function
+        used = set({self})
         for a in masterList:
-            if self != a and (self, a) not in used:
-                if hypot(a.x - self.x, a.y - self.y) <= (a.radius + self.radius) + 1:
+            if a not in used:
+                if hypot(a.x - self.x, a.y - self.y) <= (a.radius + self.radius):
                     
-                    # collision math based on physics type
-                    if exactPhysics:
+                    # Collision math based on physics type
+                    if exactPhysicsEnabled:
                         finalVelocitiesExact(self, a)
                     else:
                         finalVelocitiesOriginal(self, a)
                     
-                    used.update({(self, a), (a, self)})
-        
-        # Move the object according to its component-wise velocities
-        self.x += self.dx
-        self.y += self.dy
+                    used.update({a})
+            
+        # Apply sub-stepping again after collisions
+        for _ in range(subSteps):
+            self.x += self.dx / subSteps
+            self.y += self.dy / subSteps
+            handleBoundaryCollisions()
+
 
 
     # get initial dx and dy values for a ball
     def velocity(self, game):
 
         # recover the current speed setting in the game
-        velocity = game["speed"] * 3
+        velocity = game["speed"] * velocityFactor
 
         # randomly select a velocity for x direction
         dx = choice([-1,1]) * uniform(0, velocity)
@@ -145,8 +156,8 @@ def getValidPositions(targets, distractors):
                     break
             
             # ensure ball does not overlap with fixation cross
-            distanceFromCenter = hypot(ball.x  - (winWidth // 2), ball.y - (winHeight // 2))
-            if distanceFromCenter - ball.radius <= fixationCrossLength + 1:
+            distanceFromCenter = hypot(ball.x  - (winWidth // 2), ball.y - (winHeight // 2)) - ball.radius
+            if distanceFromCenter <= hypot(fixationCrossLength + 2, fixationCrossLength + 2):
                 validPostion = False
             
             # if the position remained valid, then append this ball to the list of placed balls
@@ -157,52 +168,54 @@ def getValidPositions(targets, distractors):
 def finalVelocitiesOriginal(ball1, ball2):
     
     # Calculate initial speeds
-    ball1_initial_speed = sqrt(ball1.dx**2 + ball1.dy**2)
-    ball2_initial_speed = sqrt(ball2.dx**2 + ball2.dy**2)
+    ball1InitialSpeed = sqrt(ball1.dx**2 + ball1.dy**2)
+    ball2InitialSpeed = sqrt(ball2.dx**2 + ball2.dy**2)
 
     # Calculate relative position and velocity
-    rx = ball2.x - ball1.x
-    ry = ball2.y - ball1.y
+    relativeXPosition = ball2.x - ball1.x
+    relativeYPosition = ball2.y - ball1.y
     dx = ball2.dx - ball1.dx
     dy = ball2.dy - ball1.dy
 
     # Calculate dot product
-    dot = rx*dx + ry*dy
+    dotProduct = (relativeXPosition * dx) + (relativeYPosition * dy)
 
     # If dot product is greater than zero, balls are moving apart
-    if dot > 0:
+    if dotProduct > 0:
         return
 
     # Calculate collision normal
-    dist = sqrt(rx*rx + ry*ry)
-    if dist == 0:  # Avoid division by zero
+    distance = hypot(relativeXPosition, relativeYPosition)
+    if distance == 0:  # Avoid division by zero
         return
-    nx = rx / dist
-    ny = ry / dist
+    normalX = relativeXPosition / distance
+    normalY = relativeYPosition / distance
 
-    # Calculate relative velocity along normal
-    vn = dx*nx + dy*ny
+    # Calculate relative velocity along normal vector
+    normalVelocity = (dx * normalX) + (dy * normalY)
 
     # Calculate impulse
-    impulse = 2 * vn
+    impulse = 2 * normalVelocity
 
     # Apply impulse to both objects (assuming equal mass)
-    ball1.dx += impulse * nx
-    ball1.dy += impulse * ny
-    ball2.dx -= impulse * nx
-    ball2.dy -= impulse * ny
+    ball1.dx += impulse * normalX
+    ball1.dy += impulse * normalY
+    ball2.dx -= impulse * normalX
+    ball2.dy -= impulse * normalY
 
     # Normalize velocities to maintain original speeds
-    ball1_new_speed = sqrt(ball1.dx**2 + ball1.dy**2)
-    ball2_new_speed = sqrt(ball2.dx**2 + ball2.dy**2)
+    ball1NewSpeed = sqrt(ball1.dx ** 2 + ball1.dy ** 2)
+    ball2NewSpeed = sqrt(ball2.dx ** 2 + ball2.dy ** 2)
     
-    if ball1_new_speed > 0:
-        ball1.dx *= ball1_initial_speed / ball1_new_speed
-        ball1.dy *= ball1_initial_speed / ball1_new_speed
+    if ball1NewSpeed > 0:
+        ball1.dx *= ball1InitialSpeed / ball1NewSpeed
+        ball1.dy *= ball1InitialSpeed / ball1NewSpeed
     
-    if ball2_new_speed > 0:
-        ball2.dx *= ball2_initial_speed / ball2_new_speed
-        ball2.dy *= ball2_initial_speed / ball2_new_speed
+    if ball2NewSpeed > 0:
+        ball2.dx *= ball2InitialSpeed / ball2NewSpeed
+        ball2.dy *= ball2InitialSpeed / ball2NewSpeed
+    
+    return
 
 # simulates a perfectly elastic collision
 def finalVelocitiesExact(ball1, ball2):

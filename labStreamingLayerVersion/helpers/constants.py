@@ -73,6 +73,8 @@ backgroundColor = GREY # background for the experiment
 hoverColor = YELLOW # color of the ball when mouse is hovering over it
 clickColor = GREEN # color of the ball when it has been clicked
 squareColor = WHITE # color of the square we draw to get the "true time" for tags
+borderColor = BLACK # color of the borders on the screen
+highlightColor = GREEN # color of ball when selected or highlighted
 
 # ============================================================================
 # ============================================================================
@@ -143,6 +145,9 @@ speedOverflow = 3
 startingTargets = 2
 startingDistractors = 1
 
+# modify this to change ball speeds
+velocityFactor = (winWidth + winHeight) // (2 * 300)
+
 # == how far (in levels) player progresses or regresses based on performance ==
 success = 1
 failure = -3
@@ -156,7 +161,7 @@ timeOrTrialsDict = {
     # time that real trials last (in milliseconds)
     # just modify the first number to get game time in minutes
     # you multiply num_minutes by (60 * 1000) to get the number of minutes in milliseconds
-    'real' :  5 * (60 * 1000), 
+    'real' :  1 * (60 * 1000), 
 
     # number of practice trials
     'practice': 5,

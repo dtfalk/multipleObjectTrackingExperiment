@@ -1,9 +1,9 @@
 # file containing class definition and associated functions for the ball objects
-from helpers.constants import *
 from random import choice, uniform
 from math import sqrt, hypot
 import pygame as pg
-from helpers.gameOptions import exactPhysicsEnabled
+from .gameOptions import exactPhysicsEnabled
+from .constants import ballRadius, defaultColor, hoverColor, clickColor, boundaries, winWidth, winHeight, fixationCrossLength, velocityFactor
 
 # == Defines the Objects (Balls) and their Properties ==
 class Ball:
@@ -110,7 +110,6 @@ class Ball:
     def velocity(self, game):
 
         # recover the current speed setting in the game
-        velocityFactor = (winWidth + winHeight) // (2 * 200)
         velocity = game["speed"] * velocityFactor
 
         # randomly select a velocity for x direction

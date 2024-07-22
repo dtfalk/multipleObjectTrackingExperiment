@@ -1,7 +1,7 @@
 import pygame as pg
 import sys
-from helpers.constants import *
-from helpers.messageScreens import multiLineMessage
+from .constants import generalQuitKey, backgroundColor, mediumFont
+from .messageScreens import multiLineMessage
 
 # returns true if user enters a valid key (a-z or 0-9 or spacebar)
 def isValid(key, requestType):

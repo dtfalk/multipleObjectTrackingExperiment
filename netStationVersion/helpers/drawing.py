@@ -1,22 +1,31 @@
 # file for drawing various objects on the screen
 import pygame as pg
-from helpers.constants import *
+from .constants import BLACK, squareColor, defaultColor, borderColor, backgroundColor, highlightColor # colors
+from .constants import boundaries, boundarySize, winWidth, winHeight, squareWidth, fixationCrossLength # size variables
+from .constants import highlightDuration, squareDuration, restingStateTime, eyesOpenAudioPath # timing + other
+from .netStationHelpers import sendTag
 
 # draws the black border on the screen
 def drawBoundaries(win):
     
     # right boundary
-    pg.draw.rect(win, BLACK, pg.Rect(boundaries['right'], 0, boundarySize, winHeight))
+    pg.draw.rect(win, borderColor, pg.Rect(boundaries['right'], 0, boundarySize, winHeight))
     
     # left boundary
-    pg.draw.rect(win, BLACK, pg.Rect(0, 0, boundarySize, winHeight))
+    pg.draw.rect(win, borderColor, pg.Rect(0, 0, boundarySize, winHeight))
 
     # top boundary
-    pg.draw.rect(win, BLACK, pg.Rect(0, 0, winWidth, boundarySize))
+    pg.draw.rect(win, borderColor, pg.Rect(0, 0, winWidth, boundarySize))
     
     # bottom boundary
-    pg.draw.rect(win, BLACK, pg.Rect(0, boundaries['bottom'], winWidth, boundarySize))
+    pg.draw.rect(win, borderColor, pg.Rect(0, boundaries['bottom'], winWidth, boundarySize))
 
+    return
+
+# draws the square in the bottom left corner so a light sensor can measure exactly when
+# each stage starts (i.e. get the "true time")
+def drawSquare(win):
+    pg.draw.rect(win, squareColor, pg.Rect(0, winHeight - squareWidth, squareWidth, squareWidth))
     return
 
 
@@ -25,7 +34,7 @@ def highlightTargets(distractors, targets, win):
 
     # color the targets and draw them
     for target in targets:
-        target.color = GREEN
+        target.color = highlightColor
         target.drawCircle(win)
 
     # draw the distractors
@@ -64,7 +73,7 @@ def drawStaticBalls(targets, distractors, win):
 # function to handle drawing the objects while they are in motion
 def drawMovingBalls(targets, distractors, win):
 
-    # check each ball in the master list
+    # check each ball in the master list for collisions and draw
     for ball in targets + distractors:
         ball.detectCollision(targets, distractors)
         ball.drawCircle(win)
@@ -102,7 +111,9 @@ def fixationScreen(targets, distractors, win):
     return
 
 # draws the screen that the users look at during the eyes open resting state
-def drawEyesOpenScreen(win):
+def drawEyesOpenScreen(win, eventsOutlet):
+
+    # == First square and start tag ==
 
     # draw background color
     win.fill(backgroundColor)
@@ -113,31 +124,113 @@ def drawEyesOpenScreen(win):
     # draw the fixation cross
     drawFixationCross(win)
 
+    # draw the true time square
+    drawSquare(win)
+
+    # send the eyes open tag
+    sendTag('OPN0', eventsOutlet)
+
     # display to user
     pg.display.flip()
 
-    # put on screen for this amount of time
-    pg.time.delay(restingStateTime)
+    # delay for a moment to capture the square with light sensor
+    pg.time.delay(squareDuration)
+
+
+    # == Just display eyes open screen ==
+
+    # draw over the square with the boundaries
+    drawBoundaries(win)
+
+    # display the no square screen
+    pg.display.flip()
+
+    # display until we need the tags for end of eyes open screen
+    pg.time.delay(restingStateTime -  squareDuration)
+
+
+    # == Final square and end tag ==
+
+    # fill in background color
+    win.fill(backgroundColor)
+
+    # draw the boundaries
+    drawBoundaries(win)
+
+    # draw the square
+    drawSquare(win)
+
+    # send eyes open finished tag
+    sendTag('OPN1', eventsOutlet)
+
+    # display screen
+    pg.display.flip()
+
+    # keep on screen
+    pg.time.delay(squareDuration)
 
     return
 
 # draws the screen that the users look at during the eyes closed resting state
-def drawEyesClosedScreen(win):
+def drawEyesClosedScreen(win, eventsOutlet):
+
+    # == First square and start tag ==
 
     # draw background color
     win.fill(BLACK)
 
+    # draw the true time square for light sensor detection
+    drawSquare(win)
+
     # display to user
     pg.display.flip()
 
+    # send the eyes open tag
+    sendTag('CLS0', eventsOutlet)
+
+    # display the square
+    pg.time.delay(squareDuration)
+
+
+    # == Just display eyes closed screen ==
+
+    # draw over the square
+    win.fill(BLACK)
+
+    # display the screen with the square drawn over
+    pg.display.flip()
+
     # put on screen for this amount of time
-    pg.time.delay(restingStateTime)
+    pg.time.delay(restingStateTime - squareDuration)
+
+    # == Final square and end tag ==
+
+    # fill background
+    win.fill(BLACK)
+
+    # draw square
+    drawSquare(win)
 
     # play audio to indicate end of eyes closed
     pg.mixer.music.load(eyesOpenAudioPath)
     pg.mixer.music.set_volume(0.22)
     pg.mixer.music.play()
+
+    # send eyes closed finished tag
+    sendTag('CLS1', eventsOutlet)
+
+    # display square + screen and display for remaining time
+    pg.display.flip()
     pg.time.delay(2000)
     pg.mixer.music.unload()
 
     return
+
+# final screen to show to grab a tag about the real trials ending
+def blankSquareScreen(tag, eventsOutlet, win):
+    win.fill(backgroundColor)
+    drawBoundaries(win)
+    drawSquare(win)
+    sendTag(tag, eventsOutlet)
+    pg.display.flip()
+    pg.time.delay(squareDuration)

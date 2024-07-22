@@ -1,7 +1,7 @@
-import pygame as pg
 import sys
-from helpers.constants import *
-from helpers.messageScreens import multiLineMessage
+import pygame as pg
+from .constants import generalQuitKey, backgroundColor, mediumFont
+from .messageScreens import multiLineMessage
 
 # returns true if user enters a valid key (a-z or 0-9 or spacebar)
 def isValid(key, requestType):
@@ -31,8 +31,13 @@ def getUserInfo(requestType, win):
             # if user presses a key, then...
             if event.type == pg.KEYDOWN:
 
-                # if they press escape, enter or return, then...
-                if event.key == generalQuitKey or event.key == pg.K_KP_ENTER or event.key == pg.K_RETURN:
+                # lets the user quit
+                if event.key == generalQuitKey:
+                    exit_key = generalQuitKey
+                    exit = True
+                    
+                # if they press enter or return, then...
+                if event.key == pg.K_KP_ENTER or event.key == pg.K_RETURN:
                     
                     if requestType == 'name' or requestType == 'subject number' or \
                     (requestType == 'starting level (1 - 99)' and (1 <= int('0' + response) <= 99)):

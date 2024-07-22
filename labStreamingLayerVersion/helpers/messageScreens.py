@@ -1,9 +1,13 @@
 import sys
 import pygame as pg
-from helpers.constants import *
-from helpers.drawing import drawBoundaries
-from helpers.LSLHelpers import sendTag
-from helpers.drawing import blankSquareScreen
+from .constants import backgroundColor, BLACK, winWidth, winHeight, boundarySize, correctAudioPath, incorrectAudioPath, selectionDuration
+from .constants import levelScreenTime, currentScoreScreenTime, trialPerformanceScreenTime, \
+                        newHighscoreScreenTime, finalScoreScreenTime, highscoreScreenTime, timeupScreenTime
+from .constants import extraLargeFont, largeFont, mediumFont
+from .constants import eyesOpenContinueKey, eyesClosedContinueKey, startPracticeTrialsKey, startRealTrialsKey, \
+                        instructionsScreenContinueKey, breakScreenContinueKey, exitOnceFinishedKey, \
+                        submitAnswerKeyString, generalQuitKey
+from .drawing import drawBoundaries, blankSquareScreen
 
 
 # function to centralize/handle the different message screens

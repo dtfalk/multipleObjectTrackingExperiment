@@ -33,7 +33,7 @@ def updateGame(game, numberOfSelectedTargets):
     # otherwise, they failed and we decrement the level
     else:
         game["level"] += failure
-        game["consecutive"] = floor(game["consecutive"] / 2)
+        game["consecutive"] = game["consecutive"] // 2
 
         # level 1 is the lowest level
         if game["level"] < 1:

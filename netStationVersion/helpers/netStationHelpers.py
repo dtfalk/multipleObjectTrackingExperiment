@@ -57,6 +57,21 @@ def preSendTags(eventsOutlet):
         tagToNumberList.append((tag, count))
         count += 1
         time.sleep(200)
+    
+    # Trial Tags
+    for i in range(1, 201):
+        
+        if len(str(i)) == 1:
+            tag = f'LLL{i}'
+        elif len(str(i)) == 2:
+            tag = f'LL{i}'
+        else:
+            tag = f'L{i}'
+            
+        eventsOutlet.send_event(event_type = tag)
+        tagToNumberList.append((tag, count))
+        count += 1
+        time.sleep(200)
 
     
     # Performance Tags

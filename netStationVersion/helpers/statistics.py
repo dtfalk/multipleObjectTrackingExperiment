@@ -59,7 +59,7 @@ def dPrime(numberOfSelectedTargets, game):
 
     # values for fixing extreme d primes
     halfHit = 0.5 / (hits + misses)
-    halfFalseAlarm = 0.5 / (misses + correctRejections)
+    halfFalseAlarm = 0.5 / (falseAlarms + correctRejections)
 
     if hitRate == 1:
         hitRate = 1 - halfHit

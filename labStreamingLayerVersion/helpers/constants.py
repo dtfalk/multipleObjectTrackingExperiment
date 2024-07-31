@@ -262,6 +262,14 @@ def levelTags(tagToEventIdNumberDictionary):
     
     return tagToEventIdNumberDictionary
 
+# Translates each level tag to an event ID number
+# 'level 15' ----> 15
+def trialTags(tagToEventIdNumberDictionary):
+    for i in range(1, 199):
+        tagToEventIdNumberDictionary[f'trial {i}'] = 700 + i
+    
+    return tagToEventIdNumberDictionary
+
 # Translates a user's performance on a trial to a number
 def performanceTags(tagToEventIdNumberDictionary):
 
@@ -295,6 +303,7 @@ tagToEventIdNumberDictionary = {
 # add in the level tags
 tagToEventIdNumberDictionary = levelTags(tagToEventIdNumberDictionary)
 performanceTags(tagToEventIdNumberDictionary)
+trialTags(tagToEventIdNumberDictionary)
 
 eventIdNumberToTagDictionary = reverseADictionary(tagToEventIdNumberDictionary)
 

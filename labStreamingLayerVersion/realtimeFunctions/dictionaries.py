@@ -4,12 +4,14 @@
 #DIN_ON_VALUE = 65534 IDK what this value is
 DIN_OFF_VALUE = 65535
 
+# == Dictionaries for translating between tags and event IDs ==
+
 # Given a dictionary, swaps keys for values and values for keys
 # (assumes that the given dictionary constitutes an injection)
 def reverseADictionary(dictionary):
     reverseDictionary = {}
     for key, value in dictionary.items():
-        reverseDictionary[value] = key
+        reverseDictionary[str(value)] = key
     return reverseDictionary
 
 # Translates each level tag to an event ID number
@@ -17,6 +19,14 @@ def reverseADictionary(dictionary):
 def levelTags(tagToEventIdNumberDictionary):
     for i in range(1, 100):
         tagToEventIdNumberDictionary[f'level {i}'] = i
+    
+    return tagToEventIdNumberDictionary
+
+# Translates each level tag to an event ID number
+# 'level 15' ----> 15
+def trialTags(tagToEventIdNumberDictionary):
+    for i in range(1, 199):
+        tagToEventIdNumberDictionary[f'trial {i}'] = 800 + i
     
     return tagToEventIdNumberDictionary
 
@@ -53,5 +63,6 @@ tagToEventIdNumberDictionary = {
 # add in the level tags
 tagToEventIdNumberDictionary = levelTags(tagToEventIdNumberDictionary)
 performanceTags(tagToEventIdNumberDictionary)
+trialTags(tagToEventIdNumberDictionary)
 
 eventIdNumberToTagDictionary = reverseADictionary(tagToEventIdNumberDictionary)
